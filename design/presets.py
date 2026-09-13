@@ -1,7 +1,78 @@
-"""Curated designs. Numbers are SI; curves approximate published hobby-motor profiles."""
+"""Curated v2 designs. Numbers are SI; curves come from data/motors.json."""
+from physics.motor import load_motor
+
+def _solid(motor):
+    m = load_motor(motor)
+    return {"motor_name": motor, "motor_type": "solid", "curve": m["curve"], "isp": m["isp"],
+            "prop_mass": m["prop_mass"], "casing_mass": m["casing_mass"], "isp_vac": m["isp"]}
+
 PRESETS = {
- "sparky": {"name":"Sparky", "tagline":"Friendly model rocket — start here.", "nose":"Ogive", "length":0.62, "diameter":0.041, "dry_mass":0.072, "prop_mass":0.024, "fin_span":0.055, "fin_count":3, "fin_position":0.45, "ballast":0.006, "chute_diameter":0.45, "wind":2, "motor":"C6-3", "isp":166, "curve":[[0,0],[0.05,14],[0.18,6],[1.45,5.2],[1.65,0]]},
- "redline": {"name":"Redline", "tagline":"Sport rocket with a date at Mach 1.", "nose":"Von Kármán", "length":1.35, "diameter":0.076, "dry_mass":0.62, "prop_mass":0.29, "fin_span":0.12, "fin_count":4, "fin_position":1.06, "ballast":0.03, "chute_diameter":1.2, "wind":4, "motor":"H128", "isp":210, "curve":[[0,0],[0.08,205],[0.22,145],[1.7,125],[2.05,0]]},
- "icarus": {"name":"Icarus II", "tagline":"Sounding-rocket energy in a compact package.", "nose":"Parabolic", "length":1.95, "diameter":0.09, "dry_mass":1.5, "prop_mass":0.73, "fin_span":0.16, "fin_count":4, "fin_position":1.52, "ballast":0.11, "chute_diameter":1.6, "wind":6, "motor":"J250", "isp":225, "curve":[[0,0],[0.08,390],[0.2,280],[2.15,245],[2.42,0]]},
- "lawn-dart": {"name":"The Lawn Dart", "tagline":"A very good lesson in what not to launch.", "nose":"Conical", "length":0.72, "diameter":0.052, "dry_mass":0.11, "prop_mass":0.026, "fin_span":0.018, "fin_count":3, "fin_position":0.33, "ballast":0, "chute_diameter":0.3, "wind":3, "motor":"C6-3", "isp":166, "curve":[[0,0],[0.05,14],[0.18,6],[1.45,5.2],[1.65,0]]}
-}
+ "sparky": {
+    "name": "Sparky", "tagline": "Friendly model rocket — start here.",
+    "nose": "Tangent Ogive", "length": 0.62, "diameter": 0.041,
+    "body_wall_thickness": 0.0015, "body_material": "cardboard",
+    "nose_wall_thickness": 0.0012, "nose_material": "abs_plastic",
+    "fin_span": 0.055, "fin_root_chord": 0.050, "fin_tip_chord": 0.030,
+    "fin_sweep": 0.01, "fin_thickness": 0.0025, "fin_material": "balsa",
+    "fin_count": 3, "fin_position": 0.42,
+    "ballast": 0.006, "payload_mass": 0.0, "recovery_mass": 0.010,
+    "chute_diameter": 0.45, "chute_cd": 1.1, "chute_deploy": "apogee",
+    "rail_length": 1.2, "wind": 2, "wind_shear": 0.0, "wind_seed": 1,
+    "max_q_limit": 400000, "max_g_limit": 30, "construction_quality": 1.0,
+    "dry_mass": 0.105,
+    **_solid("C6-3")},
+ "redline": {
+    "name": "Redline", "tagline": "Sport rocket with a date at Mach 1.",
+    "nose": "Von Kármán", "length": 1.35, "diameter": 0.076,
+    "body_wall_thickness": 0.0012, "body_material": "fiberglass",
+    "nose_wall_thickness": 0.0012, "nose_material": "fiberglass",
+    "fin_span": 0.12, "fin_root_chord": 0.11, "fin_tip_chord": 0.07,
+    "fin_sweep": 0.02, "fin_thickness": 0.004, "fin_material": "plywood",
+    "fin_count": 4, "fin_position": 1.06,
+    "ballast": 0.03, "payload_mass": 0.02, "recovery_mass": 0.05,
+    "chute_diameter": 1.2, "chute_cd": 1.0, "chute_deploy": "dual",
+    "rail_length": 2.4, "wind": 4, "wind_shear": 1.5, "wind_seed": 7,
+    "max_q_limit": 900000, "max_g_limit": 45, "construction_quality": 1.0,
+    "dry_mass": 1.034,
+    **_solid("H128")},
+ "icarus": {
+    "name": "Icarus II", "tagline": "Sounding-rocket energy in a compact package.",
+    "nose": "Parabolic", "length": 1.95, "diameter": 0.09,
+    "body_wall_thickness": 0.0012, "body_material": "fiberglass",
+    "nose_wall_thickness": 0.0012, "nose_material": "fiberglass",
+    "fin_span": 0.16, "fin_root_chord": 0.15, "fin_tip_chord": 0.10,
+    "fin_sweep": 0.025, "fin_thickness": 0.004, "fin_material": "plywood",
+    "fin_count": 4, "fin_position": 1.52,
+    "ballast": 0.11, "payload_mass": 0.05, "recovery_mass": 0.06,
+    "chute_diameter": 1.6, "chute_cd": 0.95, "chute_deploy": "apogee",
+    "rail_length": 3.0, "wind": 6, "wind_shear": 2.0, "wind_seed": 11,
+    "max_q_limit": 1200000, "max_g_limit": 55, "construction_quality": 1.0,
+    "dry_mass": 1.74,
+    **_solid("J250"),
+    "stage2": {
+        "name": "Icarus II (upper)", "nose": "Von Kármán", "length": 0.85,
+        "diameter": 0.06, "body_wall_thickness": 0.0010, "body_material": "aluminum",
+        "nose_wall_thickness": 0.0010, "nose_material": "aluminum",
+        "fin_span": 0.07, "fin_root_chord": 0.06, "fin_tip_chord": 0.04,
+        "fin_sweep": 0.01, "fin_thickness": 0.003, "fin_material": "plywood",
+        "fin_count": 3, "fin_position": 0.60,
+        "ballast": 0.02, "payload_mass": 0.05, "recovery_mass": 0.04,
+        "chute_diameter": 1.15, "chute_cd": 0.95, "chute_deploy": "apogee",
+        "rail_length": 0.3, "wind": 6, "wind_shear": 2.0, "wind_seed": 11,
+        "max_q_limit": 800000, "max_g_limit": 60, "construction_quality": 1.0,
+        "dry_mass": 0.42,
+        **_solid("H128")}},
+ "lawn-dart": {
+    "name": "The Lawn Dart", "tagline": "A very good lesson in what not to launch.",
+    "nose": "Elliptical", "length": 0.72, "diameter": 0.052,
+    "body_wall_thickness": 0.0015, "body_material": "cardboard",
+    "nose_wall_thickness": 0.0012, "nose_material": "abs_plastic",
+    "fin_span": 0.018, "fin_root_chord": 0.02, "fin_tip_chord": 0.015,
+    "fin_sweep": 0.005, "fin_thickness": 0.003, "fin_material": "plywood",
+    "fin_count": 2, "fin_position": 0.30,
+    "ballast": 0.0, "payload_mass": 0.0, "recovery_mass": 0.010,
+    "chute_diameter": 0.3, "chute_cd": 1.1, "chute_deploy": "apogee",
+    "rail_length": 1.2, "wind": 3, "wind_shear": 0.0, "wind_seed": 2,
+    "max_q_limit": 300000, "max_g_limit": 25, "construction_quality": 1.0,
+    "dry_mass": 0.138,
+    **_solid("C6-3")}}
