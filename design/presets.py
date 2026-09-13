@@ -1,0 +1,7 @@
+"""Curated designs. Numbers are SI; curves approximate published hobby-motor profiles."""
+PRESETS = {
+ "sparky": {"name":"Sparky", "tagline":"Friendly model rocket — start here.", "nose":"Ogive", "length":0.62, "diameter":0.041, "dry_mass":0.072, "prop_mass":0.024, "fin_span":0.055, "fin_count":3, "fin_position":0.45, "ballast":0.006, "chute_diameter":0.45, "wind":2, "motor":"C6-3", "isp":166, "curve":[[0,0],[0.05,14],[0.18,6],[1.45,5.2],[1.65,0]]},
+ "redline": {"name":"Redline", "tagline":"Sport rocket with a date at Mach 1.", "nose":"Von Kármán", "length":1.35, "diameter":0.076, "dry_mass":0.62, "prop_mass":0.29, "fin_span":0.12, "fin_count":4, "fin_position":1.06, "ballast":0.03, "chute_diameter":1.2, "wind":4, "motor":"H128", "isp":210, "curve":[[0,0],[0.08,205],[0.22,145],[1.7,125],[2.05,0]]},
+ "icarus": {"name":"Icarus II", "tagline":"Sounding-rocket energy in a compact package.", "nose":"Parabolic", "length":1.95, "diameter":0.09, "dry_mass":1.5, "prop_mass":0.73, "fin_span":0.16, "fin_count":4, "fin_position":1.52, "ballast":0.11, "chute_diameter":1.6, "wind":6, "motor":"J250", "isp":225, "curve":[[0,0],[0.08,390],[0.2,280],[2.15,245],[2.42,0]]},
+ "lawn-dart": {"name":"The Lawn Dart", "tagline":"A very good lesson in what not to launch.", "nose":"Conical", "length":0.72, "diameter":0.052, "dry_mass":0.11, "prop_mass":0.026, "fin_span":0.018, "fin_count":3, "fin_position":0.33, "ballast":0, "chute_diameter":0.3, "wind":3, "motor":"C6-3", "isp":166, "curve":[[0,0],[0.05,14],[0.18,6],[1.45,5.2],[1.65,0]]}
+}
