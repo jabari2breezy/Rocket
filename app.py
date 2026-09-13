@@ -14,6 +14,7 @@ class RocketHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/presets":
             return self._json({k:{key:value for key,value in v.items() if key != "curve"} for k,v in PRESETS.items()})
+        if self.path == "/": self.path = "/index.html"
         return super().do_GET()
     def do_POST(self):
         if self.path != "/api/simulate": self.send_error(404); return
