@@ -71,7 +71,9 @@ physics/
     aerodynamics.py   — Cd build-up vs (Mach, α), Barrowman CN/CP
     dynamics.py       — equations of motion, RK4 integrator, flight driver
     stability.py      — CG tracking, static margin, stability state
-    recovery.py       — chute deployment, descent phase
+    launch.py         — rail/rod phase, off-rail transition, gravity-turn wake-up
+    heating.py        — stagnation temperature, structural failure events
+    recovery.py       — chute deployment, descent phase, landing outcome
 design/
     components.py     — NoseCone/BodyTube/Transition/Fin/MotorMount/Recovery/Payload
     rocket.py         — assemble components → mass/CG/CN/CP rollups; staging splits
@@ -120,13 +122,29 @@ JSON response → UI renders plots / radar / SVG profile / warnings
 ## 5. Physics Spec
 
 ### 5.1 State & Integration
-3-DOF point-mass + pitch: `(x, y, z, vx, vy, vz, θ, ω, m)`. RK4 at dt=0.01 s during
-burn, relaxed to dt=0.05 s during coast (post-burn, pre-apogee). No Euler integration.
-Timestep-convergence check: halving dt must move apogee < 0.1%.
+3-DOF point-mass + pitch dynamics: `(x, y, z, vx, vy, vz, θ, ω, m, I_pitch)`. RK4 at
+dt=0.01 s during burn, relaxed to dt=0.05 s during coast (post-burn, pre-apogee). No
+Euler integration. Timestep-convergence check: halving dt must move apogee < 0.1%.
+
+Pitch is governed by full 2D rigid-body rotation, not a follower angle: the pitch moment
+of inertia `I_pitch` is computed from every component (mass × distance² from CG), the
+aerodynamic restoring moment from (CP−CG), and fin pitch-damping moment from `ω` and fin
+area. Net result is real short-period oscillation — a stable rocket *does* wobble gently
+and damp out ("flies like a dart"), an unstable one diverges within a fraction of a
+second. AoA is derived from the body axis vs. relative wind (rocket velocity − wind).
 
 ### 5.2 Thrust & Motor
 - Thrust = time-indexed curve, linearly interpolated. Not a flat average.
 - `Isp = I_total / (m_prop × g0)`, `g0 = 9.80665`, `v_e = Isp × g0`, `ṁ(t)=T(t)/v_e`.
+- **Altitude-compensated performance:** liquid engines interpolate Isp between published
+  sea-level and vacuum values using a density-weighted schedule (`Isp(h) = Isp_vac −
+  (Isp_vac − Isp_sl) × ρ(h)/ρ_0`); thrust = `ṁ × Isp(h) × g0` so a Merlin-class engine
+  genuinely gains thrust and Isp as it climbs. This is the real reason staging and
+  vacuum-optimized nozzles exist — and it's visible in the numbers.
+- **Honest masses:** solid motors carry their empty casing/burnout mass into the airframe
+  (a real A–O motor leaves ~30–45% of its initial mass behind); liquid stages carry real
+  structural + tankage fraction on top of propellant. Mass fraction grading uses these,
+  so it reflects real hardware, not math-magic nonexistent mass.
 - Motor database (`data/motors.json`):
   - **Solid** A–O impulse classes (each class ~2× the last; A ≈ 1.26–2.5 N·s …
     O ≈ 40,961–81,920 N·s), Isp 180–240 s, with sampled real thrust profiles for the
@@ -175,6 +193,34 @@ At separation: drop dry mass instantly, carry velocity/position forward, recompu
 mass/CG/stability **from scratch** for the new vehicle. Second stage = a new stability
 problem riding the first stage's trajectory. Up to 2 stages (covers "Icarus II").
 
+### 5.9 Launch Phase (Rod/Rail + Off-Rail Transition)
+A rocket doesn't start flying on its own — it rides a launch rail. Model the rail as a
+vertical constraint up to a selectable rail length: while on the rail the vehicle is
+forced to θ=90°, and the thrust/weight/drag battle along the rail determines rail-exit
+velocity (the safety-critical `v_offrail`, real range guidelines demand ≥ 30.5 m/s/4×
+your dive-speed — surfaced as a takeoff warning if slow). The moment the rail ends the
+rocket is free to weathercock, producing the realistic "kick" into the wind you see at
+real pads. Gravity-turn behavior then emerges naturally from the pitch dynamics, not from
+a canned steering program.
+
+### 5.10 Aero Heating & Structural Failure
+- **Stagnation temperature:** `T_stag = T(z)·(1 + 0.2·M²)` displayed alongside Max-Q so
+  "going fast" is felt as heat, not just speed. Exceeding a material-dependent nose/body
+  temperature limit emits a thermal warning.
+- **Real structural limits:** each design has a max-Q and max-axial-g limit (from material
+  + construction quality). If exceeded, this is a **simulation-terminating failure**: the
+  airframe breaks up at max-Q, the flight ends, and the dashboard reports "Structural
+  failure at t=…, q=…" instead of a grade — the grade-maker handles failures as their own
+  result state. This turns "structural margin" from a number into something that can
+  actually kill a flight.
+
+### 5.11 Descent & Landing Outcome
+Post-deploy descent is tracked for landing **velocity, drift (downrange offset from the
+pad in the 2D plane), and time of flight**. Landing outcome is reported as one of:
+Recovered (v<3 m/s), Serviceable (3–6 m/s, warn), Damaged "structural repair" (>6–7 m/s),
+or Destroyed (>12 m/s). Downrange scatter gives real feedback on wind/wheathercocking and
+feeds the "Stuck the Landing" badge.
+
 ## 6. Design System
 
 Components: nose cone (6 shapes), body tube(s), transitions/boattails, fins
@@ -218,9 +264,12 @@ Badges: 🏆 Mach Buster (M>1), 🪶 Featherweight (ζ>0.92), 🎯 Dead Center (
   Save/Load (JSON) + Launch.
 - **Dashboard:** grade banner + radar chart + badges + push-pull list of which subsystem
   is strongest/weakest; plots: altitude–time, velocity–time, Mach–time, dynamic
-  pressure–q–time, static margin–time (with 1–2 caliber band), thrust curve, and a
-  side-profile trajectory arc. Warnings: instability, overstable, high landing speed,
-  max-Q / structural, servo-zone T/W flags.
+  pressure–q–time, stagnation temperature–time, static margin–time (with 1–2 caliber
+  band), thrust curve, and a side-profile trajectory arc. Warnings: instability,
+  overstable, high landing speed, off-rail-speed violation, max-Q / structural failure,
+  thermal, servo-zone T/W flags. Landing outcome card: velocity + downrange drift +
+  Recovered/Serviceable/Damaged/Destroyed. Structural-up breakups show a failure banner
+  instead of a grade.
 - **Tutorial:** music-of-the-missions using the presets, each with objective +
   step-by-step: (1) launch Sparky & read the grade/plots; (2) fix a nose-weighted stable
   Sparky; (3) push Redline through Mach 1 & find max-Q; (4) tip the fins and watch
@@ -245,15 +294,25 @@ Badges: 🏆 Mach Buster (M>1), 🪶 Featherweight (ζ>0.92), 🎯 Dead Center (
 ## 10. Testing
 
 - `test_atmosphere.py` — ISA ρ/T/P/a vs. reference tables across all layers.
-- `test_motor.py` — thrust interpolation, Isp/v_e/ṁ identities, class boundaries.
+- `test_motor.py` — thrust interpolation, Isp/v_e/ṁ identities, class boundaries,
+  altitude-dependent liquid-Isp schedule, casing burnout mass contribution.
 - `test_aerodynamics.py` — Cd build-up vs. Mach; transonic rise; Reynolds regime;
-  nose-shape ranking; Barrowman CN/CP on a known fin set.
+  nose-shape ranking; Barrowman CN/CP on a known fin set; pitch damping coefficient sign.
 - `test_dynamics.py` — no-drag vertical ascent sanity; dt-convergence (<0.1% apogee
-  change); mass depletion matches cargo propellant; energy monotonicity in coast.
-- `test_stability.py` — CG shift during burn; margin crossing detection.
+  change); mass depletion matches cargo propellant; energy monotonicity in coast; pitch
+  oscillation frequency and damping ratio for a fin-stabilized dart-like design.
+- `test_stability.py` — CG shift during burn; margin crossing detection; pitch moment of
+  inertia magnitude reasonableness vs. brute-force moment integral.
+- `test_launch.py` — rail-exit velocity ≥ 30.5 m/s rule; off-rail kick; gravity-turn
+  wake-up from vertical constraint.
+- `test_heating.py` — stagnation temperature vs. Mach²; failure trigger at structural
+  limit; a clean failure-in-progress result from a deliberately overloaded design.
+- `test_landing.py` — landing velocity and downrange drift sign/presence; recovery status
+  codes (Recovered / Serviceable / Damaged / Destroyed).
 - `test_design.py` — component mass/CG rollups; preset integrity (every preset must be
-  physically buildable and launchable).
-- `test_efficiency.py` — sub-score math, weights, grade boundaries, badges.
+  physically buildable and launchable); moment of inertia rollup vs. numerical integral.
+- `test_efficiency.py` — sub-score math, weights, grade boundaries, badges; failure-state
+  grade/report pathway.
 - **`test_regression_c6.py`** — "Sparky" with a real C6 thrust curve flies to a peak
   altitude within the published ballpark for that motor class (the pipeline sanity check
   the whole project hangs on).
@@ -265,18 +324,20 @@ All tests run from a venv via `pytest`. No external services required.
 
 1. Repo scaffold, venv, pytest harness, package skeleton.
 2. `physics/atmosphere.py` + reference-table tests.
-3. `physics/motor.py` + thrust-curve interpolation/mass-flow tests.
-4. `physics/dynamics.py` RK4 + no-drag vertical sanity test.
-5. `physics/aerodynamics.py` (Cd build-up + Barrowman) + tests.
-6. `physics/stability.py` + burn-phase CG tracking + tests.
-7. `physics/recovery.py` chute/descent + landing-speed warnings.
-8. `design/*` components/rocket/presets → all presets build & fly.
-9. `design/efficiency.py` scoring + badges + tests.
-10. Multistage staging pass (Icarus II) + tests.
-11. `util/units.py` + tests.
-12. Web server (`http.server`) + JSON API + validation.
-13. Frontend: builder + SVG profile + launch + dashboard + charts + radar.
-14. Tutorial missions + README.
-15. `test_regression_c6.py` end-to-end; full `pytest` green.
-16. Final local run check of the web UI; git history cleaned; push to
+3. `physics/motor.py` + thrust-curve interpolation/mass-flow/altitude-Isp tests.
+4. `physics/dynamics.py` RK4 + no-drag vertical sanity test; pitch dynamics w/ inertia.
+5. `physics/aerodynamics.py` (Cd build-up + Barrowman + pitch damping) + tests.
+6. `physics/stability.py` + burn-phase CG tracking + pitch inertia rollup + tests.
+7. `physics/launch.py` rail phase + off-rail rule + tests.
+8. `physics/heating.py` stagnation temp + structural failure event + tests.
+9. `physics/recovery.py` chute/descent + landing outcome codes + tests.
+10. `design/*` components/rocket/presets → all presets build & fly.
+11. `design/efficiency.py` scoring + badges + failure-state report + tests.
+12. Multistage staging pass (Icarus II) + tests.
+13. `util/units.py` + tests.
+14. Web server (`http.server`) + JSON API + validation.
+15. Frontend: builder + SVG profile + launch + dashboard + charts + radar + heating/failure displays.
+16. Tutorial missions + README.
+17. `test_regression_c6.py` end-to-end; full `pytest` green.
+18. Final local run check of the web UI; git history cleaned; push to
     `https://github.com/jabari2breezy/Rocket`.
