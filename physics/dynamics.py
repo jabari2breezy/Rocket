@@ -54,5 +54,5 @@ def simulate(design):
       if h<=0 and t>burn+2: break
     impulse=total_impulse(curve); initial=dry+prop0; theoretical=isp*9.80665*__import__('math').log(initial/dry)
     achieved=max(v for _,_,v,*_ in data) if data else 0
-    flight={"apogee":max_alt,"max_mach":max_mach,"max_q":max_q,"min_margin":min_margin,"unstable":unstable,"landing_speed":abs(v),"liftoff_tw":thrust_at(curve,0.05)/(initial*9.80665),"drag_loss":max(0,1-achieved/max(theoretical,1))}
+    flight={"apogee":max_alt,"max_mach":max_mach,"max_q":max_q,"min_margin":min_margin,"unstable":unstable,"landing_speed":abs(v),"liftoff_tw":thrust_at(curve,0.05)/(initial*9.80665),"drag_loss":max(0,1-achieved/max(theoretical,1)),"impulse":impulse,"burn_time":burn,"theoretical_dv":theoretical}
     return {"series":data,"flight":{k:round(v,2) if isinstance(v,float) else v for k,v in flight.items()},"score":score(flight,design),"cp":round(cp,3),"cg":round(cg,3)}
